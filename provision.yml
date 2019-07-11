@@ -204,22 +204,6 @@
         group: "{{ user }}"
         dest: "{{ userhome }}/screenrc"
 
-    - name: "copy: cron job for scheduling the deploy"
-      copy:
-        mode: 0755
-        owner: root
-        group: root
-        content: |
-          #!/bin/sh
-          set -e
-          jobname="{{ jobname }}"
-          rm -f /tmp/${jobname}.log
-          if [ -e /run/screen/S-{{ user }}/* ]; then
-              exit 0
-          fi
-          sudo -u {{ user }} screen -d -m -L -c {{ userhome }}/screenrc {{ userhome }}/${jobname}
-        dest: "/etc/cron.daily/{{ jobname }}"
-
     - name: "copy: script for running rsync deploy"
       copy:
         mode: 0755
