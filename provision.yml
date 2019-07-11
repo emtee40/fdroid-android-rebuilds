@@ -4,6 +4,7 @@
 
   vars:
     user: "android-rebuilds"
+    userhome: "/home/{{ user }}"
 
   tasks:
     - name: "set hostname"
@@ -97,6 +98,9 @@
         - wget
         - yaml-mode
 
+        # tools for android-rebuilds
+        - rsync
+
     - name: "file: create symbolic link to enable all locales"
       file:
         src: "/usr/share/i18n/SUPPORTED"
@@ -144,3 +148,43 @@
         state: present
         unique: yes
       with_list: "{{ authorized_keys }}"
+
+    - name: "file: make .ssh dir"
+      file:
+        path: "{{ userhome }}/.ssh"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: 0700
+
+    - name: "copy: known_hosts"
+      copy:
+        src: known_hosts
+        dest: "{{ userhome }}/.ssh/known_hosts"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: 0640
+
+    - name: "copy: deploy private key"
+      copy:
+        mode: 0640
+        owner: root
+        group: "{{ user }}"
+        content: "{{ id_rsa }}"
+        dest: "{{ userhome }}/.ssh/id_rsa"
+
+    - name: "copy: deploy public key"
+      copy:
+        mode: 0640
+        owner: root
+        group: "{{ user }}"
+        content: "{{ id_rsa_pub }}"
+        dest: "{{ userhome }}/.ssh/id_rsa.pub"
+
+    - name: "file: make repo root dir"
+      file:
+        path: "{{ userhome }}/mirror.f-droid.org/android-free/repository"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: 0755
