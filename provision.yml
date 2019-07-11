@@ -1,0 +1,146 @@
+---
+- hosts: all
+  become_method: su
+
+  vars:
+    user: "android-rebuilds"
+
+  tasks:
+    - name: "set hostname"
+      hostname:
+        name: "{{ user }}"
+
+    - name: "shell: set motd"
+      shell: |
+        echo > /etc/motd
+        figlet "{{ user }}" >> /etc/motd
+        printf '\ncreated with https://gitlab.com/fdroid/android-rebuilds\n\n' >> /etc/motd
+
+    - name: "authorized_keys: set up root access"
+      authorized_key:
+        user: root
+        key: "{{ item.key }}"
+        state: present
+        unique: yes
+      with_list: "{{ authorized_keys }}"
+
+    - name: "apt: install debian packages for secure apt setup"
+      apt:
+        name: "{{item}}"
+        state: latest
+        install_recommends: no
+        update_cache: yes
+      with_items:
+        - apt-transport-https
+        - debian-archive-keyring
+        - gnupg
+
+    - name: "apt_repository: debian.osuosl.org stretch"
+      apt_repository:
+        repo: |
+          deb https://debian.osuosl.org/debian/ stretch main
+        update_cache: no
+
+    - name: "apt_repository: debian.osuosl.org stretch-updates"
+      apt_repository:
+        repo: |
+          deb https://debian.osuosl.org/debian/ stretch-updates main
+        update_cache: no
+
+    - name: "apt_repository: deb.debian.org debian-security"
+      apt_repository:
+        repo: |
+          deb https://deb.debian.org/debian-security/ stretch/updates main
+        update_cache: no
+
+    - name: "apt_repository: security.debian.org"
+      apt_repository:
+        repo: 'deb http://security.debian.org/debian-security stretch/updates main'
+        update_cache: no
+
+    - name: "copy: clear /etc/apt/sources.list"
+      copy:
+        content: ""
+        dest: "/etc/apt/sources.list"
+
+    - name: "apt: dist-upgrade"
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: "apt: install debian packages"
+      apt:
+        name: "{{item}}"
+        state: latest
+        autoclean: yes
+        autoremove: yes
+        install_recommends: no
+      with_items:
+
+        # essential utilities
+        - bash-completion
+        - curl
+        - elpa-markdown-mode
+        - emacs-nox
+        - emacs-goodies-el
+        - figlet
+        - git
+        - htop
+        - iotop
+        - less
+        - ncdu
+        - nethogs
+        - lvm2
+        - screen
+        - unattended-upgrades
+        - vim
+        - wget
+        - yaml-mode
+
+    - name: "file: create symbolic link to enable all locales"
+      file:
+        src: "/usr/share/i18n/SUPPORTED"
+        dest: "/etc/locale.gen"
+        state: link
+        force: yes
+    - name: "locale_gen: generate all locales"
+      locale_gen: "name={{item}} state=present"
+      with_lines:
+        - "grep -Eo '^ *[^#][^ ]+' /etc/locale.gen"
+
+    - name: "timezone: set system to Etc/UTC"
+      timezone:
+        name: Etc/UTC
+    - name: 'lineinfile: set default system locale to en_US.UTF-8'
+      lineinfile:
+        dest: "/etc/default/locale"
+        line: "LANG=en_US.UTF-8"
+
+    - name: "copy: script for updating with apt"
+      copy:
+        mode: 0700
+        content: |
+          #!/bin/sh
+
+          set -x
+          apt-get update
+          apt-get -y dist-upgrade --download-only
+
+          set -e
+          apt-get -y upgrade
+          apt-get dist-upgrade
+          apt-get autoremove --purge
+          apt-get clean
+        dest: /root/update-all
+
+    - name: "user: create {{ user }} user"
+      user:
+        name: "{{ user }}"
+        shell: /bin/bash
+    - name: "authorized_keys: set up {{ user }}"
+      authorized_key:
+        user: "{{ user }}"
+        key: "{{ item.key }}"
+        state: present
+        unique: yes
+      with_list: "{{ authorized_keys }}"
