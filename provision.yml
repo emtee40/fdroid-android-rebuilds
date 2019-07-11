@@ -5,6 +5,7 @@
   vars:
     user: "android-rebuilds"
     userhome: "/home/{{ user }}"
+    jobname: rsync-to-mirror-f-droid-org
 
   tasks:
     - name: "set hostname"
@@ -188,3 +189,45 @@
         owner: "{{ user }}"
         group: "{{ user }}"
         mode: 0755
+
+    - name: "copy: set up {{user}} for running deploy steps"
+      copy:
+        content: |
+          utf8 on on
+          defutf8 on
+          log on
+          logfile /tmp/{{ jobname }}.log
+          sessionname {{ jobname }}
+          shelltitle {{ jobname }}
+        mode: 0640
+        owner: root
+        group: "{{ user }}"
+        dest: "{{ userhome }}/screenrc"
+
+    - name: "copy: cron job for scheduling the deploy"
+      copy:
+        mode: 0755
+        owner: root
+        group: root
+        content: |
+          #!/bin/sh
+          set -e
+          jobname="{{ jobname }}"
+          rm -f /tmp/${jobname}.log
+          if [ -e /run/screen/S-{{ user }}/* ]; then
+              exit 0
+          fi
+          sudo -u {{ user }} screen -d -m -L -c {{ userhome }}/screenrc {{ userhome }}/${jobname}
+        dest: "/etc/cron.daily/{{ jobname }}"
+
+    - name: "copy: script for running rsync deploy"
+      copy:
+        mode: 0755
+        owner: root
+        group: root
+        content: |
+          #!/bin/sh -ex
+          rsync -axv --delete \
+              /home/android-rebuilds/mirror.f-droid.org/android-free/repository/ \
+              mirror.f-droid.org:/var/www/html/android-free/repository/
+        dest: "{{ userhome }}/{{ jobname }}"
