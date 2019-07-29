@@ -184,7 +184,7 @@
 
     - name: "file: make repo root dir"
       file:
-        path: "{{ userhome }}/mirror.f-droid.org/android-free/repository"
+        path: "{{ userhome }}/mirror.f-droid.org/android-free"
         state: directory
         owner: "{{ user }}"
         group: "{{ user }}"
@@ -212,6 +212,6 @@
         content: |
           #!/bin/sh -ex
           rsync -axv --delete \
-              /home/android-rebuilds/mirror.f-droid.org/android-free/repository/ \
-              mirror.f-droid.org:/var/www/html/android-free/repository/
+              /home/android-rebuilds/mirror.f-droid.org/android-free/ \
+              mirror.f-droid.org:/var/www/html/android-free/
         dest: "{{ userhome }}/{{ jobname }}"
