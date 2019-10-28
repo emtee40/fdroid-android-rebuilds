@@ -184,25 +184,11 @@
 
     - name: "file: make repo root dir"
       file:
-        path: "{{ userhome }}/mirror.f-droid.org/android-free"
+        path: "{{ userhome }}/staging"
         state: directory
         owner: "{{ user }}"
         group: "{{ user }}"
         mode: 0755
-
-    - name: "copy: set up {{user}} for running deploy steps"
-      copy:
-        content: |
-          utf8 on on
-          defutf8 on
-          log on
-          logfile /tmp/{{ jobname }}.log
-          sessionname {{ jobname }}
-          shelltitle {{ jobname }}
-        mode: 0640
-        owner: root
-        group: "{{ user }}"
-        dest: "{{ userhome }}/screenrc"
 
     - name: "copy: script for running rsync deploy"
       copy:
@@ -211,7 +197,11 @@
         group: root
         content: |
           #!/bin/sh -ex
-          rsync -axv --delete \
-              /home/android-rebuilds/mirror.f-droid.org/android-free/ \
-              mirror.f-droid.org:/var/www/html/android-free/
+          # CAUTION: hard-coded remote rsync command
+          # -n / --dry-run not supported
+          # changing options not supported
+          # changing remote destination not supported (/var/www/html/android-free/)
+          rsync -axv -P --delete \
+              /home/android-rebuilds/staging/ \
+              mirror.f-droid.org:/xxx-ignored/
         dest: "{{ userhome }}/{{ jobname }}"
